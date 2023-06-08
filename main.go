@@ -92,7 +92,7 @@ func registerToEKS(clusterName string) {
 	cmd := exec.Command("eksctl", "get", "cluster", "--name", clusterName, "--region", region)
 	_, err := cmd.Output()
 	if err == nil {
-		fmt.Printf("cluster '%s' already registered", clusterName)
+		fmt.Printf("cluster '%s' already registered\n", clusterName)
 		return
 	}
 
@@ -107,7 +107,7 @@ func registerToEKS(clusterName string) {
 	if err != nil {
 		fmt.Printf("failed to apply registration manifests in cluster '%s': %v\n", clusterName, err)
 	}
-	fmt.Printf("cluster '%s' registered successfully", clusterName)
+	fmt.Printf("cluster '%s' registered successfully\n", clusterName)
 }
 
 func deregisterFromEKS(clusterName string) {
@@ -116,7 +116,7 @@ func deregisterFromEKS(clusterName string) {
 	cmd := exec.Command("eksctl", "get", "cluster", "--name", clusterName, "--region", region)
 	_, err := cmd.Output()
 	if err != nil && strings.Contains(err.Error(), "404") {
-		fmt.Printf("cluster '%s' already deregistered", clusterName)
+		fmt.Printf("cluster '%s' already deregistered\n", clusterName)
 		return
 	}
 
@@ -125,5 +125,5 @@ func deregisterFromEKS(clusterName string) {
 	if err != nil {
 		fmt.Printf("failed to deregister cluster '%s': %v\n", clusterName, err)
 	}
-	fmt.Printf("cluster '%s' deregistered successfully", clusterName)
+	fmt.Printf("cluster '%s' deregistered successfully\n", clusterName)
 }
