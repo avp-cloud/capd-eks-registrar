@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/kubernetes-client/go/kubernetes/config/api"
@@ -102,10 +103,21 @@ func registerToEKS(clusterName string) {
 		fmt.Printf("failed to register cluster '%s': %v\n", clusterName, err)
 	}
 
-	cmd = exec.Command("kubectl", "--kubeconfig", clusterName, "apply", "-f", "eks-connector.yaml,eks-connector-clusterrole.yaml,eks-connector-console-dashboard-full-access-group.yaml")
-	_, err = cmd.Output()
-	if err != nil {
-		fmt.Printf("failed to apply registration manifests in cluster '%s': %v\n", clusterName, err)
+	retries := 1
+	for {
+		cmd = exec.Command("kubectl", "--kubeconfig", clusterName, "apply", "-f", "eks-connector.yaml,eks-connector-clusterrole.yaml,eks-connector-console-dashboard-full-access-group.yaml")
+		_, err = cmd.Output()
+		if err != nil {
+			fmt.Printf("failed to apply registration manifests in cluster '%s': %v, Retrying...\n", clusterName, err)
+			time.Sleep(3 * time.Second)
+			retries += 1
+			if retries > 3 {
+				fmt.Printf("failed to apply registration manifests in cluster '%s': %v, Aborting...\n", clusterName, err)
+				return
+			}
+			continue
+		}
+		break
 	}
 	fmt.Printf("cluster '%s' registered successfully\n", clusterName)
 }
