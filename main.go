@@ -34,7 +34,7 @@ subjects:`
 
 var crbTemplateUser = `
 - kind: User
-  name: "arn:aws:iam::054522839098:user/avpradeep-hpe"
+  name: "%s"
   apiGroup: rbac.authorization.k8s.io`
 
 var crbTemplateFoot = `
@@ -125,6 +125,8 @@ func registerToEKS(clusterName string) {
 	crb := crbTemplateHead
 	for _, i := range strings.Split(adminARNs, ",") {
 		crb += fmt.Sprintf(crbTemplateUser, i)
+		cm := exec.Command("echo", "'      - \""+i+"\"'", ">>", "eks-connector-clusterrole.yaml")
+		_, _ = cm.Output()
 	}
 	crb += crbTemplateFoot
 	err = os.WriteFile(clusterName+"-rbac.yaml", []byte(crb), 0644)
