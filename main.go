@@ -26,6 +26,24 @@ var (
 	prefix     = flag.String("prefix", "", "prefix filter for clusters")
 )
 
+var crbTemplateHead = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eks-connector-console-dashboard-full-access-clusterrole-binding
+subjects:`
+
+var crbTemplateUser = `
+- kind: User
+  name: "arn:aws:iam::054522839098:user/avpradeep-hpe"
+  apiGroup: rbac.authorization.k8s.io`
+
+var crbTemplateFoot = `
+roleRef:
+  kind: ClusterRole
+  name: eks-connector-console-dashboard-full-access-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+`
+
 func main() {
 	flag.Parse()
 	var err error
@@ -89,6 +107,7 @@ func registerToEKS(clusterName string) {
 	}
 	region := os.Getenv("AWS_DEFAULT_REGION")
 	role := os.Getenv("AWS_EKS_CONNECTOR_ROLE_ARN")
+	adminARNs := os.Getenv("AWS_EKS_ADMIN_ARNS")
 
 	cmd := exec.Command("eksctl", "get", "cluster", "--name", clusterName, "--region", region)
 	_, err := cmd.Output()
@@ -103,9 +122,19 @@ func registerToEKS(clusterName string) {
 		fmt.Printf("failed to register cluster '%s': %v\n", clusterName, err)
 	}
 
+	crb := crbTemplateHead
+	for _, i := range strings.Split(adminARNs, ",") {
+		crb += fmt.Sprintf(crbTemplateUser, i)
+	}
+	crb += crbTemplateFoot
+	err = os.WriteFile(clusterName+"-rbac.yaml", []byte(crb), 0644)
+	if err != nil {
+		fmt.Printf("failed to create custom rbac file for cluster '%s': %v\n", clusterName, err)
+	}
+
 	retries := 1
 	for {
-		cmd = exec.Command("kubectl", "--kubeconfig", clusterName, "apply", "-f", "eks-connector.yaml,eks-connector-clusterrole.yaml,eks-connector-console-dashboard-full-access-group.yaml")
+		cmd = exec.Command("kubectl", "--kubeconfig", clusterName, "apply", "-f", "eks-connector.yaml,eks-connector-clusterrole.yaml,eks-connector-console-dashboard-full-access-group.yaml,"+clusterName+"-rbac.yaml")
 		_, err = cmd.Output()
 		if err != nil {
 			fmt.Printf("failed to apply registration manifests in cluster '%s': %v, Retrying...\n", clusterName, err)
